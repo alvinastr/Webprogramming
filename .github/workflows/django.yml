@@ -12,34 +12,35 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: ["3.9","3.10"]
+        python-version: ["3.9", "3.10"]
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Cache dependencies
+      id: cache-dependencies  # Add an ID to this step
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}  # Include Python version
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+    - name: Install Dependencies
+      if: steps.cache-dependencies.outputs.cache-hit != 'true'  # Install only if cache is not hit
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
     # (Optional) Set Environment Variables if needed
     # - name: Set environment variables
     #   run: |
     #     echo "MY_SECRET_KEY=${{ secrets.MY_SECRET_KEY }}" >> $GITHUB_ENV
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
     - name: Run Tests
-      run: |
-        python manage.py test
+      run: python manage.py test
